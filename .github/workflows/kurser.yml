@@ -1,0 +1,48 @@
+name: kurser
+
+on:
+  schedule:
+    - cron: "5,35 7-16 * * 1-5"   # børstida i Norden (UTC)
+    - cron: "30 21 * * 1-5"       # etter at USA stenger
+    - cron: "0 6 * * 1"           # ukentlig keepalive
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kurser
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install yfinance
+      - run: python test_fetch.py
+      - run: python fetch.py out/prices.json
+      - name: Publiser prices.json på grenen data
+        working-directory: out
+        run: |
+          git init -q -b data
+          git config user.name "amy-kurser"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add prices.json
+          git commit -qm "kurser $(date -u +%FT%TZ)"
+          git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" data
+      - name: Keepalive (hindrer at GitHub skrur av planen etter 60 dager)
+        if: github.event.schedule == '0 6 * * 1'
+        run: |
+          date -u > .keepalive
+          git config user.name "amy-kurser"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .keepalive
+          git commit -qm "keepalive"
+          git push -q

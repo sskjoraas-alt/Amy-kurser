@@ -1,0 +1,3 @@
+# Egne aksjer som mangler i universe.txt. Én per linje, Yahoo-symbol:
+# Oslo .OL, Stockholm .ST (mellomrom blir -), København .CO, Helsingfors .HE, Xetra .DE, USA uten endelse.
+# Eksempel: NOVO-B.CO
