@@ -74,6 +74,35 @@ def test_should_publish_needs_half_the_universe():
     assert screen.should_publish({"universe": 100, "with_data": 90, "top": []}) is False
 
 
+def _fake(monkey_bars):
+    screen.universe = lambda: (list(monkey_bars), {})
+    screen.fetch_daily = lambda syms, chunk=200: {s: monkey_bars[s] for s in syms if monkey_bars.get(s)}
+    screen.fetch_refs = lambda: (IDX, {"NOK": 1.0, "USD": 10.0})
+
+
+def test_main_writes_file_when_data_is_good():
+    import json, pathlib, tempfile
+    _fake({"BIG.OL": _bars(252, 100.0, 1_000_000), "OK.OL": _bars(252, 50.0, 1_000_000)})
+    path = pathlib.Path(tempfile.mkdtemp()) / "out" / "screen.json"
+    assert screen.main(str(path)) == 0
+    out = json.loads(path.read_text(encoding="utf-8"))
+    assert out["universe"] == 2 and len(out["top"]) == 2 and out["generated"].endswith("Z")
+
+
+def test_main_writes_nothing_when_most_symbols_lack_data():
+    import pathlib, tempfile
+    _fake({"BIG.OL": _bars(252, 100.0, 1_000_000), "A.OL": None, "B.OL": None})
+    path = pathlib.Path(tempfile.mkdtemp()) / "screen.json"
+    assert screen.main(str(path)) == 3 and not path.exists()
+
+
+def test_main_writes_nothing_when_universe_is_empty():
+    import pathlib, tempfile
+    _fake({})
+    path = pathlib.Path(tempfile.mkdtemp()) / "screen.json"
+    assert screen.main(str(path)) == 3 and not path.exists()
+
+
 if __name__ == "__main__":
     bad = 0
     for name, fn in list(globals().items()):

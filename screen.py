@@ -2,7 +2,12 @@
 
 Filen inneholder bare offentlige tall. Aldri beholdning, antall eller beløp.
 """
+import datetime
+import json
+import pathlib
 import statistics
+import sys
+import time
 
 LIQ_FLOOR_NOK = 5_000_000
 TOP_N = 40
@@ -84,3 +89,109 @@ def build(bars, idx, fx, names, now):
 def should_publish(out):
     """Publiser bare når minst halve universet ga data og lista ikke er tom."""
     return bool(out.get("top")) and out.get("with_data", 0) >= 0.5 * out.get("universe", 0)
+
+
+# region -> (børsfilter eller None, høyst antall symboler). Mest omsatte først.
+REGIONS = {"no": (None, 750), "se": (None, 750), "dk": (None, 750), "fi": (None, 750),
+           "de": ("GER", 500), "us": (None, 2500)}
+MIN_AVG_VOLUME = 20000
+
+
+def universe():
+    """Symboler og navn fra Yahoo sin aksjesøker, mest omsatte først per region."""
+    import yfinance as yf  # noqa: PLC0415 (bare på GitHub)
+    from yfinance import EquityQuery  # noqa: PLC0415
+
+    syms, names = [], {}
+    for region, (exchange, cap) in REGIONS.items():
+        parts = [EquityQuery("eq", ["region", region]), EquityQuery("gt", ["avgdailyvol3m", MIN_AVG_VOLUME])]
+        if exchange:
+            parts.append(EquityQuery("eq", ["exchange", exchange]))
+        got = 0
+        try:
+            while got < cap:
+                res = yf.screen(EquityQuery("and", parts), offset=got, size=250,
+                                sortField="avgdailyvol3m", sortAsc=False)
+                quotes = (res or {}).get("quotes") or []
+                if not quotes:
+                    break
+                for q in quotes:
+                    sym = str(q.get("symbol") or "").upper()
+                    if sym and q.get("quoteType") == "EQUITY" and sym not in names:
+                        syms.append(sym)
+                        names[sym] = q.get("longName") or q.get("shortName") or ""
+                got += len(quotes)
+                time.sleep(1)
+        except Exception as e:  # noqa: BLE001
+            print("univers feilet for", region, e, file=sys.stderr)
+        print(region, len(syms), "symboler så langt", file=sys.stderr)
+    return syms, names
+
+
+def _download(syms):
+    import yfinance as yf  # noqa: PLC0415
+
+    for attempt in range(3):
+        try:
+            return yf.download(syms, period="1y", interval="1d", group_by="ticker",
+                               progress=False, threads=True, auto_adjust=True)
+        except Exception as e:  # noqa: BLE001
+            print("retry", attempt, e, file=sys.stderr)
+            time.sleep(5 * (attempt + 1))
+    return None
+
+
+def fetch_daily(syms, chunk=200):
+    """Ett år med dagsstolper per symbol: {"c": sluttkurser, "v": volum}."""
+    bars = {}
+    for i in range(0, len(syms), chunk):
+        part = syms[i : i + chunk]
+        df = _download(part)
+        if df is None:
+            continue
+        for sym in part:
+            try:
+                sub = (df[sym] if len(part) > 1 else df).dropna(subset=["Close"])
+                if len(sub):
+                    bars[sym] = {"c": [float(x) for x in sub["Close"]],
+                                 "v": [float(x) if x == x else 0.0 for x in sub["Volume"]]}
+            except Exception:  # noqa: BLE001
+                pass
+        time.sleep(2)
+    return bars
+
+
+def fetch_refs():
+    """Indekser (sluttkurser) og valutakurser (kroner per valuta)."""
+    import fetch  # noqa: PLC0415
+
+    got = fetch_daily(list(fetch.IDX.values()) + list(fetch.FX.values()))
+    idx = {name: (got.get(sym) or {}).get("c") or [] for name, sym in fetch.IDX.items()}
+    fx = {"NOK": 1.0}
+    for cur, sym in fetch.FX.items():
+        closes = (got.get(sym) or {}).get("c")
+        if closes:
+            fx[cur] = closes[-1]
+    return idx, fx
+
+
+def main(path="screen.json"):
+    """Skriver screen.json og gir 0. Gir 3 uten å skrive når dataene er for tynne."""
+    syms, names = universe()
+    bars = fetch_daily(syms) if syms else {}
+    idx, fx = fetch_refs()
+    now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    out = build(bars, idx, fx, names, now)
+    out["universe"] = len(syms)
+    print(f"{out['universe']} i universet, {out['with_data']} med data, {out['passed']} over gulvet")
+    if not should_publish(out):
+        print("For tynne data. Skriver ingenting.", file=sys.stderr)
+        return 3
+    p = pathlib.Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1] if len(sys.argv) > 1 else "screen.json"))
