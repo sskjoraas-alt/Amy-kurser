@@ -340,3 +340,15 @@ eq(swapNet(H({forventet:10}), POS({verdi:40000,gevinst:-5000,gjen:2}), 200000, F
 ## Rekkefølge og avhengigheter
 
 A1 → A2 → A3. B1 trenger kontrakten fra A2, og B2 trenger at A3 har publisert en fil. C1–C6 trenger bare kontrakten fra B1 og `MOTOR_ID` fra B2, og kan bygges mot `SAMPLE` før motoren har kjørt. Etter Del A finnes en fungerende grovsil. Etter Del B kommer varsler på telefonen selv om fanen er gammel. Etter Del C er alt på plass.
+
+---
+
+## Status 2026-11-11 (for neste økt)
+
+- **Del A: ferdig og flettet til main.** Prøvekjøring: 3 749 i universet, 3 645 med data, 2 605 over gulvet, 40 i `top`. Tak per region i `screen.REGIONS`. `main()` setter `universe` til antall symboler fra `universe()`.
+- **Task B1: ferdig.** Motorens tekst ligger i den planlagte oppgaven. Kontrakten har ett felt mer enn planen: `handlinger[].netto_fordel_pct`.
+- **Task B2 steg 1: ferdig.** `MOTOR_ID = trig_0117boDTiQZwhcHG7eS8mb3J`, «Aksjemotor til Amy», `CRON_TZ=Europe/Oslo 22 7 * * 1,3,5`.
+- **Task B2 steg 2: gjenstår.** Økta fikk ikke lov til å starte oppgaven. Brukeren kjører den selv eller venter på første faste kjøring. Les så `motor` og kontroller mot kontrakten.
+- **Task B2 steg 3–5: gjenstår, og gjøres etter at Del C er publisert.** Ellers overstyrer motorens stopp brukerens tall før `stopp_overstyrt` finnes i `pf`.
+- **Del C: ikke påbegynt.** Amy-kilden er 1,5 MB og må leses i sin helhet før publisering. Brukeren valgte å ta dette i en ny økt.
+- **Åpent:** 35 av 40 i første `top` var USA-aksjer. Brukeren er tilbudt kvote per marked og har ikke svart.
