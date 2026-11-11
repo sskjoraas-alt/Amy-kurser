@@ -361,3 +361,8 @@ A1 → A2 → A3. B1 trenger kontrakten fra A2, og B2 trenger at A3 har publiser
 - Laget ligger i fire filer i mappa `amy-ui/` i repoet: `layer.js` (ny aksjefane), `build.py` (setter laget inn rett før `initSync();`, legger til `MREF` ved `AREF=db.doc(...)` og retter én setning i `SXSYS`), `stub.js` og `check_ui.js` (68 sjekker, alle grønne). `check_ui.js` trenger `sample.json` = `{"motor": <j fra motor-dokumentet>, "pf": <j fra pf-dokumentet>}`, hentet med ArtifactData. Den skal ikke i repoet.
 - Neste økt: les artifacten, les hver linje, lagre som `orig.html`, kjør `python3 build.py`, kjør `node check_ui.js index.html`, publiser `index.html`. Deretter Task B2 steg 3–4 og mandagssjekken.
 - Valg i laget: motorens stopp og mål skrives inn på aksjen når brukeren ikke har overstyrt (`stopU`/`tgtU`). Tall brukeren hadde fra før regnes som overstyrt, med knappen «Bruk motorens tall på alle».
+
+## Status 2026-11-11 kl. 15:00
+
+- Laget er bygd på nytt mot live-versjonen (1794337982-6bf7) og alle 68 sjekker er grønne med ekte `motor` og `pf`.
+- Publisering stoppet igjen på lesekravet: Amy-kilden er ca. 630 000 tokens. Read tar høyst ca. 25 000 tokens per kall (rundt 300 linjer), og én tur rommer ikke hele fila. Lesingen må deles over flere turer.
