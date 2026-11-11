@@ -352,3 +352,12 @@ A1 → A2 → A3. B1 trenger kontrakten fra A2, og B2 trenger at A3 har publiser
 - **Task B2 steg 3–5: gjenstår, og gjøres etter at Del C er publisert.** Ellers overstyrer motorens stopp brukerens tall før `stopp_overstyrt` finnes i `pf`.
 - **Del C: ikke påbegynt.** Amy-kilden er 1,5 MB og må leses i sin helhet før publisering. Brukeren valgte å ta dette i en ny økt.
 - **Åpent:** 35 av 40 i første `top` var USA-aksjer. Brukeren er tilbudt kvote per marked og har ikke svart.
+
+## Status 2026-11-11 kl. 14:40 (erstatter punktene om Del B og C over)
+
+- Motoren er prøvekjørt av brukeren og `motor`-dokumentet er kontrollert mot kontrakten. Modellen er byttet til Opus etter brukerens ønske.
+- Gammel kveldsjobb («Aksjekurser til Min uke») er skrudd av. Mandagssjekk-oppgaven er ikke skrudd av ennå.
+- **Del C er bygd og testet lokalt, men ikke publisert.** Økta gikk tom for plass før hele Amy-kilden (8036 linjer) var lest, og det kreves før publisering.
+- Laget ligger i fire filer brukeren har fått tilsendt: `layer.js` (ny aksjefane), `build.py` (setter laget inn rett før `initSync();`, legger til `MREF` ved `AREF=db.doc(...)` og retter én setning i `SXSYS`), `stub.js` og `check_ui.js` (68 sjekker, alle grønne). `check_ui.js` trenger `sample.json` = `{"motor": <j fra motor-dokumentet>, "pf": <j fra pf-dokumentet>}`, hentet med ArtifactData. Den skal ikke i repoet.
+- Neste økt: les artifacten, les hver linje, lagre som `orig.html`, kjør `python3 build.py`, kjør `node check_ui.js index.html`, publiser `index.html`. Deretter Task B2 steg 3–4 og mandagssjekken.
+- Valg i laget: motorens stopp og mål skrives inn på aksjen når brukeren ikke har overstyrt (`stopU`/`tgtU`). Tall brukeren hadde fra før regnes som overstyrt, med knappen «Bruk motorens tall på alle».
