@@ -50,3 +50,37 @@ def rank_scores(rows):
     for r in rows:
         r["score"] = round(r["score"], 1)
     return sorted(rows, key=lambda r: r["score"], reverse=True)
+
+
+def _index_for(sym):
+    """Nordiske og tyske aksjer måles mot OSEBX, USA (uten endelse) mot S&P 500."""
+    return "OSEBX" if "." in sym else "SP500"
+
+
+def build(bars, idx, fx, names, now):
+    """bars[sym] = {"c": sluttkurser, "v": volum}. Gir innholdet i screen.json."""
+    import fetch  # noqa: PLC0415 (deler valutaregelen med kursjobben)
+
+    rows, with_data = [], 0
+    for sym, b in bars.items():
+        m = metrics(b.get("c") or [], b.get("v") or [], idx.get(_index_for(sym)) or [])
+        if not m:
+            continue
+        with_data += 1
+        cur = fetch.currency(sym)
+        rate = fx.get(cur)
+        if not rate:
+            continue
+        turnover_nok = round(m.pop("turnover") * rate)
+        if turnover_nok < LIQ_FLOOR_NOK:
+            continue
+        rows.append({"sym": sym, "name": names.get(sym, ""), "cur": cur, "p": round(b["c"][-1], 4),
+                     **m, "turnover_nok": turnover_nok})
+    ranked = rank_scores(rows)
+    return {"generated": now, "universe": len(bars), "with_data": with_data,
+            "passed": len(ranked), "top": ranked[:TOP_N]}
+
+
+def should_publish(out):
+    """Publiser bare når minst halve universet ga data og lista ikke er tom."""
+    return bool(out.get("top")) and out.get("with_data", 0) >= 0.5 * out.get("universe", 0)

@@ -35,6 +35,45 @@ def test_rank_scores_single_row_gets_full_score():
     assert out[0]["score"] == 100.0
 
 
+def _bars(n, px, vol):
+    return {"c": [px] * n, "v": [vol] * n}
+
+
+IDX = {"OSEBX": [100.0] * 252, "SP500": [100.0] * 252}
+
+
+def test_build_drops_illiquid_and_short():
+    bars = {"BIG.OL": _bars(252, 100.0, 1_000_000), "SMALL.OL": _bars(252, 1.0, 100), "NEW.OL": _bars(50, 100.0, 1_000_000)}
+    out = screen.build(bars, IDX, {"NOK": 1.0, "USD": 10.0}, {"BIG.OL": "Big ASA"}, "2026-11-11T21:50:00Z")
+    assert out["generated"] == "2026-11-11T21:50:00Z"
+    assert out["universe"] == 3 and out["with_data"] == 2 and out["passed"] == 1
+    assert [r["sym"] for r in out["top"]] == ["BIG.OL"] and out["top"][0]["turnover_nok"] == 100_000_000
+    assert out["top"][0]["name"] == "Big ASA" and out["top"][0]["p"] == 100.0 and out["top"][0]["cur"] == "NOK"
+    assert "turnover" not in out["top"][0]
+
+
+def test_build_converts_turnover_to_nok():
+    out = screen.build({"AAPL": _bars(252, 100.0, 10_000)}, IDX, {"NOK": 1.0, "USD": 10.0}, {}, "x")
+    assert out["top"][0]["turnover_nok"] == 10_000_000 and out["top"][0]["cur"] == "USD"
+
+
+def test_build_skips_stock_without_fx_rate():
+    out = screen.build({"VOLV-B.ST": _bars(252, 100.0, 1_000_000)}, IDX, {"NOK": 1.0}, {}, "x")
+    assert out["with_data"] == 1 and out["passed"] == 0 and out["top"] == []
+
+
+def test_build_keeps_only_top_n():
+    bars = {f"S{i}.OL": {"c": [100.0] * 251 + [100.0 + i], "v": [1_000_000] * 252} for i in range(60)}
+    out = screen.build(bars, IDX, {"NOK": 1.0}, {}, "x")
+    assert out["passed"] == 60 and len(out["top"]) == 40 and out["top"][0]["sym"] == "S59.OL"
+
+
+def test_should_publish_needs_half_the_universe():
+    assert screen.should_publish({"universe": 100, "with_data": 49, "top": [{}]}) is False
+    assert screen.should_publish({"universe": 100, "with_data": 50, "top": [{}]}) is True
+    assert screen.should_publish({"universe": 100, "with_data": 90, "top": []}) is False
+
+
 if __name__ == "__main__":
     bad = 0
     for name, fn in list(globals().items()):
