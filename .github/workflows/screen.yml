@@ -4,6 +4,8 @@ on:
   schedule:
     - cron: "50 21 * * 1-5"   # etter at USA stenger (UTC)
   workflow_dispatch:
+  push:
+    branches: [claude/aksjemotor]   # midlertidig, for prøvekjøring
 
 permissions:
   contents: write
