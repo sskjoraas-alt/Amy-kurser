@@ -1,3 +1,8 @@
 __pycache__/
 out/
 .superpowers/
+amy-ui/orig.html
+amy-ui/index.html
+amy-ui/sample.json
+node_modules/
+package*.json
