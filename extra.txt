@@ -2,3 +2,5 @@
 # Oslo .OL, Stockholm .ST (mellomrom blir -), København .CO, Helsingfors .HE, Xetra .DE, USA uten endelse.
 # Eksempel: NOVO-B.CO
 vnt
+Embrac-b.st
+Hlun-b.co
